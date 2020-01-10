@@ -1,0 +1,36 @@
+Our approach:
+1) Precomputing Letter distributions:
+We start by reading the corpus and calculating the counts of successive letter transitions. This is stored as a dictionary with 729 keys, i.e for all letter transitions including letter to space and vice versa transitions. Including the space as a letter helps us keep track of which letters start a word and which letters appear at the end of words.
+
+This is calculated by looping through each letter and keeping track of the number of number of times each letter follows the previous.
+
+To avoid 0 values of counts we apply laplace smoothing and set initial values of all transitions to 1. This ensures that P(W) and subsequently P(D) is not set to 0 when some letter to letter transition isn't present in the dictionary.
+
+The letter counts are then normalized by multiplying with a factor of 1 divided by the counts of all transitions of letters.
+
+We use Log probablities instead of probablities since the values may be very small, resulting in overflow while calculating the products. Taking log means that products may now be computed as summations.
+
+***
+Optimization Logic 1:
+We also tried to give more weightage to frequently appearing transitions such as a->n, which appears 51464 times in the corpus. The idea is to give such transitions more importance compared to others such as a->a which has only 6 occurences. This is implemented by multiplying by a small factor based on count if the count is greater than 10000.
+***
+
+To facilitate faster testing of decryption we pushed this dictionary to a pickle and read the pickle file for decryption as this is a one time computation based on corpus. we have commented this code so it can be run for different corpus files.
+
+2) Decryption using Metropolis Hastings
+2.1 We start with generation of initial replace and rearrangement tables. This is done randomly. This is the configuration T.
+2.2 With a random choice we choose either table and swap 2 values, i.e. 2 letter transitions are swapped in replace table or 2 numbers are swapped in rearrangement table
+***
+Optimization Logic 2:
+Instead of random selection, we also tried to choose between the two tables by updating both tables and choosing the new proposed table as the one that gives a higher probablity on decoding.
+***
+2.3 We decode using old and newly generated probablities and calculate likelihood probablities - Log P(D) and Log P(D'). Basically, we measure the likelihood of our new tables and divide it by the likelihood of the previous tables. If this ratio is greater than 1, then we proceed with the new tables. If the ratio is less than 1, meaning the new tables produce less likely documents, then we accept the new table with a probability equal to the ratio. 
+Since we are working with log probablities we compute the sum of transition probablities. If Log P(D')> Log P(D), we replace T with T'. Otherwise we randomly choose a number between 0 and 1. If this value is greater than e^(Log P(D')-Log P(D)), we replace T with T'.
+2.4 We maintain a variable best_document with empty document string and probablity value set to -Infinity (since we are working with log probablities). The variable is updated with the output every time we get a document with better probablity.
+2.5 Owing to our time limit of 10 minutes, we run the code in multiple iterations say 3 giving equal time for each run and output the best result from these runs.	
+
+3) Best Output in 4 runs in 10 mins 
+3.1 Output for sample encrypted files without any optimization logic is given in folder titled 'Without Any Optimization'. 
+3.2 Output with Optimization logic 1 is given in folder titled 'Optimization Logic 1'. Comparing with 1 this is much better and gives these results in much fewer iterations (Approx 10000 iterations per run)
+3.3 Output with Optimization logic 2 is given in folder titled 'Optimization Logic 2'. This was taking longer time, so we had to reduce number of runs to 2. The result of 3.2 was still better so lets stick to 3.2
+
